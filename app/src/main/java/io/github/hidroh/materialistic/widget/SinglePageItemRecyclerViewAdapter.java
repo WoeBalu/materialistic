@@ -1,7 +1,10 @@
 package io.github.hidroh.materialistic.widget;
 
+import android.support.v4.view.GestureDetectorCompat;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.RecyclerView;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -25,6 +28,7 @@ public class SinglePageItemRecyclerViewAdapter
     private int mLevelIndicatorWidth = 0;
     private int mDefaultItemVerticalMargin = 0;
     private boolean mAutoExpand = true;
+    private RecyclerView mRecyclerView;
 
     public SinglePageItemRecyclerViewAdapter(ItemManager itemManager, ArrayList<ItemManager.Item> list) {
         super(itemManager);
@@ -37,6 +41,13 @@ public class SinglePageItemRecyclerViewAdapter
         mLevelIndicatorWidth = AppUtils.getDimensionInDp(mContext, R.dimen.level_indicator_width);
         mDefaultItemVerticalMargin = AppUtils.getDimensionInDp(mContext, R.dimen.margin);
         mAutoExpand = Preferences.shouldAutoExpandComments(mContext);
+        mRecyclerView = recyclerView;
+    }
+
+    @Override
+    public void onDetachedFromRecyclerView(RecyclerView recyclerView) {
+        mRecyclerView = null;
+        super.onDetachedFromRecyclerView(recyclerView);
     }
 
     @Override
@@ -74,6 +85,31 @@ public class SinglePageItemRecyclerViewAdapter
 
         holder.mPostedTextView.setText(item.getDisplayedTime(mContext));
         AppUtils.setTextWithLinks(holder.mContentTextView, item.getText());
+        holder.itemView.setOnTouchListener(new View.OnTouchListener() {
+            private GestureDetectorCompat gd = new GestureDetectorCompat(mContext,
+                    new GestureDetector.SimpleOnGestureListener() {
+                        @Override
+                        public boolean onDown(MotionEvent e) {
+                            return true;
+                        }
+
+                        @Override
+                        public boolean onDoubleTap(MotionEvent e) {
+                            if (!mExpanded.containsKey(item.getParent())) {
+                                return false;
+                            }
+
+                            mRecyclerView.smoothScrollToPosition(
+                                    mList.indexOf(mExpanded.get(item.getParent())));
+                            return true;
+                        }
+                    });
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return gd.onTouchEvent(event);
+            }
+        });
         if (item.getKidCount() == 0) {
             return;
         }
